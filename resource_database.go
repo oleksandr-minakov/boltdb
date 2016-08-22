@@ -15,23 +15,33 @@ func resourceDatabase() *schema.Resource {
 		Delete: DeleteDatabase,
 
 		Schema: map[string]*schema.Schema{
+			"path": &schema.Schema{
+				Type:		schema.TypeString,
+				Optional:	true,
+				Default:	"default.db",
+			},
 			"bucket": &schema.Schema{
 				Type:		schema.TypeString,
 				Required:	true,
-				Default:	"BOLTDB_BUCKET",
 			},
 			"values": &schema.Schema{
 				Type:		schema.TypeString,
-				Optional:	true,
-				Default:	"default_values",
+				Required:	true,
 			},
 		},
 	}
 }
 
 func CreateDatabase(d *schema.ResourceData, meta interface{}) error {
-	db := meta.(*bolt.DB)
+	log.Println("#CreateDatabase")
+	log.Printf("#CreateDatabase path -> %+v", d.Get("path"))
 
+	path := d.Get("path").(string)
+	db, err := bolt.Open(path, 0600, nil)
+	if err != nil {
+		return fmt.Errorf("error during open DB: %s", err)
+	}
+	defer db.Close()
 	db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucket([]byte(d.Get("bucket").(string)))
 		if err != nil {
@@ -45,8 +55,13 @@ func CreateDatabase(d *schema.ResourceData, meta interface{}) error {
 }
 
 func UpdateDatabase(d *schema.ResourceData, meta interface{}) error {
-	db := meta.(*bolt.DB)
-
+	log.Println("#UpdateDatabase")
+	path := d.Get("path").(string)
+	db, err := bolt.Open(path, 0600, nil)
+	if err != nil {
+		return fmt.Errorf("error during open DB: %s", err)
+	}
+	defer db.Close()
 	db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(d.Get("bucket").(string)))
 		err := b.Put([]byte("KEY"), []byte(d.Get("values").(string)))
@@ -58,8 +73,13 @@ func UpdateDatabase(d *schema.ResourceData, meta interface{}) error {
 }
 
 func ReadDatabase(d *schema.ResourceData, meta interface{}) error {
-	db := meta.(*bolt.DB)
-
+	log.Println("#ReadDatabase")
+	path := d.Get("path").(string)
+	db, err := bolt.Open(path, 0600, nil)
+	if err != nil {
+		return fmt.Errorf("error during open DB: %s", err)
+	}
+	defer db.Close()
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(d.Get("bucket").(string)))
 		v := b.Get([]byte("KEY"))
@@ -72,8 +92,13 @@ func ReadDatabase(d *schema.ResourceData, meta interface{}) error {
 }
 
 func DeleteDatabase(d *schema.ResourceData, meta interface{}) error {
-	db := meta.(*bolt.DB)
-
+	log.Println("#DeleteDatabase")
+	path := d.Get("path").(string)
+	db, err := bolt.Open(path, 0600, nil)
+	if err != nil {
+		return fmt.Errorf("error during open DB: %s", err)
+	}
+	defer db.Close()
 	db.Update(func(tx *bolt.Tx) error {
 		return tx.DeleteBucket([]byte(d.Get("bucket").(string)))
 	})
